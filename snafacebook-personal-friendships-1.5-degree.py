@@ -49,7 +49,6 @@ client_id="Insert here"
 client_secret="Insert here"
 
 
-
 print ""
 print "....................................................."
 print "FRIENDSHIPS OF A FACEBOOK USER"
@@ -106,24 +105,23 @@ for i,k in enumerate(friends["data"]):
 		# Get the name of the second user
 		url4 = "https://graph.facebook.com/"+l["id"]
 		name2 = requests.get(url4).json()
-		print name2
 		second_name = name2["name"]
+		sleep(2)
 		
 		if first_name != second_name:		
 			print ""
-			print "Checking mutual friends between",first_name,"and",second_name
-		
+			print "Checking the connection between",first_name,"and",second_name
+			sleep(2)
 			# Get the mutual friends of first and second user
-			base_url2 = 'https://graph.facebook.com/'+friends["data"][i]["id"]+'/mutualfriends/'+l["id"]
-			url2 = '%s?access_token=%s' % (base_url2, ACCESS_TOKEN,)	
+			base_url2 = 'https://graph.facebook.com/fql?q=SELECT uid2 FROM friend WHERE uid1="'+friends["data"][i]["id"]+'" and uid2="'+l["id"]+'"'
+			#base_url2 = 'https://graph.facebook.com/'+friends["data"][i]["id"]+'/mutualfriends/'+l["id"]
+			url2 = '%s&access_token=%s' % (base_url2, ACCESS_TOKEN,)	
 			names = requests.get(url2).json()
-		
-			# Add mutual edges
+			
+			# Add edge
 			if "data" in names.keys() and len(names["data"]) != 0:
-				for m in names["data"]:
-					print "Mutual friends with",m["name"]
-					graph.add_edge(first_name,m["name"])
-					graph.add_edge(second_name,m["name"])
+				graph.add_edge(first_name,second_name)
+				print "-",first_name,"and",second_name,"are friends."
 		
 
 print ""
