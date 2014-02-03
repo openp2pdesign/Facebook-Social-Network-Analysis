@@ -100,13 +100,14 @@ for i,k in enumerate(friends["data"]):
 	# Get the name of the first user
 	url3 = "https://graph.facebook.com/"+friends["data"][i]["id"]
 	name1 = requests.get(url3).json()
-	first_name = name1["first_name"]+" "+name1["last_name"]
+	first_name = name1["name"]
 	
 	for l in friends["data"]:
 		# Get the name of the second user
 		url4 = "https://graph.facebook.com/"+l["id"]
 		name2 = requests.get(url4).json()
-		second_name = name2["first_name"]+" "+name2["last_name"]
+		print name2
+		second_name = name2["name"]
 		
 		if first_name != second_name:		
 			print ""
