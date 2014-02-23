@@ -106,18 +106,20 @@ for i,k in enumerate(friends["data"]):
 		url4 = "https://graph.facebook.com/"+l["id"]
 		name2 = requests.get(url4).json()
 		second_name = name2["name"]
-		sleep(2)
+		sleep(1)
 		
 		if first_name != second_name:		
 			print ""
 			print "Checking the connection between",first_name,"and",second_name
-			sleep(2)
 			# Get the mutual friends of first and second user
 			base_url2 = 'https://graph.facebook.com/fql?q=SELECT uid2 FROM friend WHERE uid1="'+friends["data"][i]["id"]+'" and uid2="'+l["id"]+'"'
 			#base_url2 = 'https://graph.facebook.com/'+friends["data"][i]["id"]+'/mutualfriends/'+l["id"]
 			url2 = '%s&access_token=%s' % (base_url2, ACCESS_TOKEN,)	
-			names = requests.get(url2).json()
-			
+			try:
+				names = requests.get(url2).json()
+			except:
+				sleep(5*60)
+				names = requests.get(url2).json()		
 			# Add edge
 			if "data" in names.keys() and len(names["data"]) != 0:
 				graph.add_edge(first_name,second_name)
