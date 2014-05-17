@@ -57,6 +57,7 @@ client_secret="Insert here"
 
 
 
+
 print ""
 print "....................................................."
 print "FRIENDSHIPS ON A FACEBOOK GROUP"
@@ -135,18 +136,21 @@ for i,k in enumerate(content["data"]):
 			base_url2 = 'https://graph.facebook.com/'+k["id"]+'/friends/'+m["id"]
 			url2 = '%s?access_token=%s' % (base_url2, INFINITE_TOKEN)	
 			try:
-				name = requests.get(url2).json()
-			except:
 				name1 = requests.get(url2)
 				name = json.loads(name1.text.strip("'<>() ").replace('\'', '\"'))
-			if len(name["data"]) != 0:
-				print ""
+			except ValueError:
+				print "There was an error:"
 				print name
-			if "data" in name and len(name["data"]) != 0:
-				Y = name["data"][0]["name"]
-				#print type(X), type(Y)
-				print "- Friend with",Y
-				graph.add_edge(X,Y)
+				print name1
+			else:
+				if len(name["data"]) != 0:
+					print ""
+					print name
+				if "data" in name and len(name["data"]) != 0:
+					Y = name["data"][0]["name"]
+					#print type(X), type(Y)
+					print "- Friend with",Y
+					graph.add_edge(X,Y)
 	
 # Save the file and exit	
 print ""
