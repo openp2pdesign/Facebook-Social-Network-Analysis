@@ -22,6 +22,9 @@ import os
 os.system('cls' if os.name=='nt' else 'clear')
 
 graph=nx.Graph()
+notgraph=nx.Graph()
+
+users = {}
 
 # Some group examples:
 # Fabber in Italia
@@ -83,11 +86,52 @@ content = requests.get(url).json()
 
 print ""
 print "Getting all the users..."
+print ""
+print len(content["data"]),"users..."
+
+# Get all the users 
+for i,k in enumerate(content["data"]):
+	base_url3 = 'https://graph.facebook.com/'+k["id"]
+	fields3 = '&limit=2000'
+	url3 = '%s?fields=%s&access_token=%s' % (base_url3, fields3, INFINITE_TOKEN)	
+	
+	try:
+		firstname = requests.get(url3).json()
+	except:
+		name1 = requests.get(url3)
+		firstname = json.loads(name1.text.strip("'<>() ").replace('\'', '\"'))
+
+	if "error" in firstname:
+		# Check if we reached the API limit
+		if firstname["error"]["message"] == "User request limit reached.":
+			# Wait 30 minutes if we reach the user limit
+			# See https://developers.facebook.com/docs/reference/ads-api/api-rate-limiting/
+			print ""
+			print "There was an error. Waiting 30 minutes before starting again..."
+			sleep(60*30)
+			firstname = requests.get(url3).json()
+		# Check if we got another error which I haven't understood yet ...
+		elif firstname["error"]["message"] == "Unsupported get request.":
+			print ""
+			print "There is an error with this user."
+	else:
+		print "User:", firstname["name"]
+		users[firstname["id"]] = firstname["name"]
+		# Add node with gender data	
+		X = firstname["name"]
+		graph.add_node(X)
+		notgraph.add_node(X)
+		graph[X]['id']= firstname["id"]
+		notgraph[X]['id']= firstname["id"]
+		if "gender" in firstname:
+			graph[X]['gender']=firstname["gender"]
+		else:
+			graph[X]['gender']= "None"	
 
 # Get the users and the connections between the users
-for i,k in enumerate(content["data"]):
-
-	base_url3 = 'https://graph.facebook.com/'+k["id"]
+for i,k in enumerate(users):
+	
+	base_url3 = 'https://graph.facebook.com/'+k
 	fields3 = '&limit=2000'
 	url3 = '%s?fields=%s&access_token=%s' % (base_url3, fields3, INFINITE_TOKEN)	
 	
@@ -120,37 +164,35 @@ for i,k in enumerate(content["data"]):
 			print "There is an error with this user."
 
 	else:
-		# Add node with gender data	
-		X = firstname["name"]
-		graph.add_node(X)
-		if "gender" in firstname:
-			graph[X]['gender']=firstname["gender"]
-		else:
-			graph[X]['gender']= "None"
 	
 		# Check friendships with the other members of the group
 		print ""
 		print "Check the friends of",X
 
-		for j,m in enumerate(content["data"]):
-			base_url2 = 'https://graph.facebook.com/'+k["id"]+'/friends/'+m["id"]
-			url2 = '%s?access_token=%s' % (base_url2, INFINITE_TOKEN)	
-			try:
-				name1 = requests.get(url2)
-				name = json.loads(name1.text.strip("'<>() ").replace('\'', '\"'))
-			except ValueError:
-				print "There was an error:"
-				print name
-				print name1
-			else:
-				if len(name["data"]) != 0:
-					print ""
+		for j,m in enumerate(users):
+		
+			if graph.has_edge(users[k],users[m]) == False and notgraph.has_edge(users[k],users[m]) == False:
+			
+				base_url2 = 'https://graph.facebook.com/'+k+'/friends/'+m
+				url2 = '%s?access_token=%s' % (base_url2, INFINITE_TOKEN)	
+				try:
+					name1 = requests.get(url2)
+					name = json.loads(name1.text.strip("'<>() ").replace('\'', '\"'))
+				except ValueError:
+					print "There was an error:"
 					print name
-				if "data" in name and len(name["data"]) != 0:
-					Y = name["data"][0]["name"]
-					#print type(X), type(Y)
-					print "- Friend with",Y
-					graph.add_edge(X,Y)
+					print name1
+				else:
+					if len(name["data"]) != 0:
+						print ""
+						print name
+					if "data" in name and len(name["data"]) != 0:
+						Y = name["data"][0]["name"]
+						#print type(X), type(Y)
+						print "- Friend with",Y
+						graph.add_edge(X,Y)
+					else:
+						notgraph.add_edge(X,users[m])
 	
 # Save the file and exit	
 print ""
