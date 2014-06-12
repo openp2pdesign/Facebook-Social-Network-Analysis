@@ -11,6 +11,8 @@
 # install json with pip install json
 # install NetworkX with pip install networkx
 #
+# Another option to consider:
+# http://datajournalismi.blogspot.it/2013/10/social-network-analysis-of-ones.html
 
 import requests
 import json
@@ -56,8 +58,6 @@ client_id="Insert here"
 client_secret="Insert here"
 
 
-
-
 print ""
 print "....................................................."
 print "FRIENDSHIPS ON A FACEBOOK GROUP"
@@ -84,9 +84,11 @@ content = requests.get(url).json()
 print ""
 print "Getting all the users..."
 
+end_point = "https://graph.facebook.com/v1.0/"
+
+
 # Get the users and the connections between the users
 for i,k in enumerate(content["data"]):
-
 	base_url3 = 'https://graph.facebook.com/'+k["id"]
 	fields3 = '&limit=2000'
 	url3 = '%s?fields=%s&access_token=%s' % (base_url3, fields3, INFINITE_TOKEN)	
@@ -96,14 +98,6 @@ for i,k in enumerate(content["data"]):
 	except:
 		name1 = requests.get(url3)
 		firstname = json.loads(name1.text.strip("'<>() ").replace('\'', '\"'))
-	
-	# Print debug information
-	print ""
-	print "----------------------"
-	print ""
-	print "New user:"
-	print
-	print firstname
 
 	if "error" in firstname:
 		# Check if we reached the API limit
@@ -120,38 +114,63 @@ for i,k in enumerate(content["data"]):
 			print "There is an error with this user."
 
 	else:
-		# Add node with gender data	
-		X = firstname["name"]
+
+		# Print debug information
+        	print ""
+        	print "----------------------"
+        	print ""
+		X = firstname["name"].encode("utf-8")
+        	print "New user:", X
+        	print
+        	# Debug
+        	# print firstname
+
+		# Add node with gender data
 		graph.add_node(X)
 		if "gender" in firstname:
 			graph[X]['gender']=firstname["gender"]
 		else:
 			graph[X]['gender']= "None"
 	
-		# Check friendships with the other members of the group
-		print ""
-		print "Check the friends of",X
-
+		# Check friendships with the other members of the group:		
+		# Creating requests
+		all_requests = []
 		for j,m in enumerate(content["data"]):
-			base_url2 = 'https://graph.facebook.com/'+k["id"]+'/friends/'+m["id"]
-			url2 = '%s?access_token=%s' % (base_url2, INFINITE_TOKEN)	
-			try:
-				name1 = requests.get(url2)
-				name = json.loads(name1.text.strip("'<>() ").replace('\'', '\"'))
-			except ValueError:
-				print "There was an error:"
-				print name
-				print name1
-			else:
-				if len(name["data"]) != 0:
-					print ""
-					print name
-				if "data" in name and len(name["data"]) != 0:
-					Y = name["data"][0]["name"]
-					#print type(X), type(Y)
-					print "- Friend with",Y
-					graph.add_edge(X,Y)
+			single_request= {'method':'GET', 'relative_url': k['id']+'/friends/'+m['id']}
+			all_requests.append(single_request)
+		
+	# Making batch requests
+	# https://developers.facebook.com/docs/graph-api/making-multiple-requests/
+	# Split the list of requests in blocks of 50 requests, the limit for batch requests
+	# Got this list split from http://stackoverflow.com/a/9671264
+	chunks = [all_requests[50*i:50*(i+1)] for i in range(len(all_requests)/50)]
 	
+	for u in chunks:
+		batch_request = json.dumps(u)			
+		facebook_request = requests.post(end_point, params={'access_token': INFINITE_TOKEN, 'batch': batch_request})
+		#result_string = json.loads(facebook_request.text.strip("'<>() ").replace('\'', '\"'))
+		result_string = json.loads(facebook_request.text)
+		
+		if "error" in result_string:
+                	# Wait 30 minutes if we reach the user limit
+                        # See https://developers.facebook.com/docs/reference/ads-api/api-rate-limiting/
+                        print "There was an error. Waiting 30 minutes before starting again..."
+                        sleep(60*30)
+
+                        facebook_request = requests.post(end_point, params={'access_token': INFINITE_TOKEN, 'batch': batch_request})
+                        result_string = json.loads(facebook_request.text)
+
+		for z in result_string:
+			if z["body"] is not None or z is not None:
+				result_dict = json.loads(z["body"])
+				# Debug
+				# print result_dict
+				if "data" in result_dict and len(result_dict["data"]) != 0:
+					for t in result_dict["data"]:
+						Y = t["name"].encode("utf-8")
+						print "- Friend with",Y
+						graph.add_edge(X,Y)
+			
 # Save the file and exit	
 print ""
 print "The group was analyzed succesfully."
