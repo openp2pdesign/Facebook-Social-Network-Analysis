@@ -57,7 +57,6 @@ ACCESS_TOKEN = "Insert here"
 client_id="Insert here"
 client_secret="Insert here"
 
-
 print ""
 print "....................................................."
 print "FRIENDSHIPS ON A FACEBOOK GROUP"
@@ -85,7 +84,6 @@ print ""
 print "Getting all the users..."
 
 end_point = "https://graph.facebook.com/v1.0/"
-
 
 # Get the users and the connections between the users
 for i,k in enumerate(content["data"]):
@@ -147,10 +145,19 @@ for i,k in enumerate(content["data"]):
 	
 	for u in chunks:
 		batch_request = json.dumps(u)			
-		facebook_request = requests.post(end_point, params={'access_token': INFINITE_TOKEN, 'batch': batch_request})
-		#result_string = json.loads(facebook_request.text.strip("'<>() ").replace('\'', '\"'))
-		result_string = json.loads(facebook_request.text)
-		
+		try:
+			facebook_request = requests.post(end_point, params={'access_token': INFINITE_TOKEN, 'batch': batch_request})
+			#result_string = json.loads(facebook_request.text.strip("'<>() ").replace('\'', '\"'))
+		except: 
+			print "There was an error. Waiting 30 minutes before starting again..."
+			sleep(60*30)
+			facebook_request = requests.post(end_point, params={'access_token': INFINITE_TOKEN, 'batch': batch_request})
+		try:
+			result_string = json.loads(facebook_request.text)
+		except:
+			print "There was an error n decoding the JSON data"
+			result_string = "error"
+
 		if "error" in result_string:
                 	# Wait 30 minutes if we reach the user limit
                         # See https://developers.facebook.com/docs/reference/ads-api/api-rate-limiting/
